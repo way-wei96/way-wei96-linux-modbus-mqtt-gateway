@@ -29,12 +29,16 @@
 *.dylib
 
 # Executables
+gateway
 *.exe
 *.out
 *.app
 *.i*86
 *.x86_64
 *.hex
+
+# IDE
+.idea/
 
 # Debug files
 *.dSYM/
