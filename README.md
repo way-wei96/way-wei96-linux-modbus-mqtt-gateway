@@ -2,18 +2,30 @@
 
 Linux industrial gateway in C. This slice only reads a serial port and hex-dumps bytes.
 
-Device path is hardcoded in `src/main.c` as `/tmp/gateway-pty` for now.
-Point that path at a real tty first, for example:
-
-```text
-ln -sf /dev/tty.usbserial /tmp/gateway-pty
-```
-
-Build and run with `cc`:
+## Build
 
 ```text
 cc -Wall -Wextra -O0 -g -o gateway src/main.c
-./gateway
+```
+
+## Run
+
+```text
+./gateway <device>
+```
+
+Without real hardware (Python PTY):
+
+```text
+python3 tools/virtual_serial.py --run ./gateway
+```
+
+Or two terminals: run `python3 tools/virtual_serial.py`, then start `./gateway` with the printed device path, then press Enter in the script.
+
+Real serial example:
+
+```text
+./gateway /dev/tty.usbserial
 ```
 
 No Modbus or MQTT yet.

@@ -3,18 +3,22 @@
 #include <termios.h>
 #include <unistd.h>
 
-/* 初版写死路径；稍后改为 argv 或配置文件。 */
-#define DEVICE "/tmp/gateway-pty"
-
-int main(void)
+int main(int argc, char **argv)
 {
     unsigned char buf[256];
     struct termios tio;
     ssize_t n, i;
     int fd;
+    const char *device;
+
+    if (argc != 2) {
+        fprintf(stderr, "usage: %s <device>\n", argv[0]);
+        return 1;
+    }
+    device = argv[1];
 
     /* O_NOCTTY：别把该串口收编成控制终端，避免设备字节被当成 Ctrl-C。 */
-    fd = open(DEVICE, O_RDWR | O_NOCTTY);
+    fd = open(device, O_RDWR | O_NOCTTY);
     if (fd < 0) {
         perror("open");
         return 1;
