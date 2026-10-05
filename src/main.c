@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <termios.h>
@@ -34,6 +35,12 @@ int main(int argc, char **argv)
     cfsetospeed(&tio, B9600);
     /* CLOCAL 忽略 modem 线；CREAD 允许接收。 */
     tio.c_cflag |= (CLOCAL | CREAD);
+    /*
+     * VMIN=0, VTIME=1：最多等 0.1s；超时返回 0，避免像 BIO 那样永久卡在 read。
+     * （cfmakeraw 默认 VMIN=1，会一直阻塞到至少 1 字节。）
+     */
+    tio.c_cc[VMIN] = 0;
+    tio.c_cc[VTIME] = 1;
     if (tcsetattr(fd, TCSANOW, &tio) < 0) {
         perror("tcsetattr");
         return 1;
@@ -42,12 +49,19 @@ int main(int argc, char **argv)
     for (;;) {
         /* 一次未必读完所有到达数据；n 是本轮实际字节数。 */
         n = read(fd, buf, sizeof buf);
-        if (n <= 0)
-            break;
-        for (i = 0; i < n; i++)
-            printf("%02X ", buf[i]);
-        printf("\n");
-        fflush(stdout); /* 尽快显示，便于盯串口实时输出。 */
+        if (n > 0) {
+            for (i = 0; i < n; i++)
+                printf("%02X ", buf[i]);
+            printf("\n");
+            fflush(stdout); /* 尽快显示，便于盯串口实时输出。 */
+            continue;
+        }
+        if (n == 0)
+            continue; /* 超时，无数据，继续等 */
+        if (errno == EINTR)
+            continue;
+        perror("read");
+        break;
     }
 
     close(fd);
