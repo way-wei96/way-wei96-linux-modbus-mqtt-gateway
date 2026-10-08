@@ -21,7 +21,7 @@ def send_bursts(master):
     for payload in BURSTS:
         os.write(master, payload)
         print("tx:", " ".join(f"{b:02X}" for b in payload), flush=True)
-        time.sleep(0.3)
+        time.sleep(0.5)  # > gateway VTIME (0.1s) so each burst becomes one frame
 
 
 def main():
