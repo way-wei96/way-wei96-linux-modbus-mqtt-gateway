@@ -3,8 +3,28 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
+
+/* 把常见波特率数字映射成 termios 常量；不支持则返回 (speed_t)-1。 */
+static speed_t baud_to_speed(int baud)
+{
+    switch (baud) {
+    case 9600:
+        return B9600;
+    case 19200:
+        return B19200;
+    case 38400:
+        return B38400;
+    case 57600:
+        return B57600;
+    case 115200:
+        return B115200;
+    default:
+        return (speed_t)-1;
+    }
+}
 
 /* Modbus RTU CRC16：初值 0xFFFF，多项式 0xA001（反射形式）。 */
 static uint16_t modbus_crc16(const unsigned char *data, size_t len)
@@ -59,13 +79,24 @@ int main(int argc, char **argv)
     struct termios tio;
     ssize_t n, i;
     int fd;
+    int baud = 9600;
+    speed_t speed;
     const char *device;
 
-    if (argc != 2) {
-        fprintf(stderr, "usage: %s <device>\n", argv[0]);
+    if (argc < 2 || argc > 3) {
+        fprintf(stderr, "usage: %s <device> [baud]\n", argv[0]);
         return 1;
     }
     device = argv[1];
+    if (argc == 3)
+        baud = atoi(argv[2]);
+
+    speed = baud_to_speed(baud);
+    if (speed == (speed_t)-1) {
+        fprintf(stderr, "unsupported baud: %d\n", baud);
+        fprintf(stderr, "supported: 9600 19200 38400 57600 115200\n");
+        return 1;
+    }
 
     /* O_NOCTTY：别把该串口收编成控制终端，避免设备字节被当成 Ctrl-C。 */
     fd = open(device, O_RDWR | O_NOCTTY);
@@ -80,8 +111,8 @@ int main(int argc, char **argv)
     }
     /* raw：要原始字节流，不要终端行编辑/回显等加工。 */
     cfmakeraw(&tio);
-    cfsetispeed(&tio, B9600);
-    cfsetospeed(&tio, B9600);
+    cfsetispeed(&tio, speed);
+    cfsetospeed(&tio, speed);
     /* CLOCAL 忽略 modem 线；CREAD 允许接收。 */
     tio.c_cflag |= (CLOCAL | CREAD);
     /*
