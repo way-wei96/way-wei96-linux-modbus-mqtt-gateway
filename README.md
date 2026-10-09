@@ -28,6 +28,6 @@ Real serial example:
 ./gateway /dev/tty.usbserial
 ```
 
-`read` uses a short termios timeout (VMIN=0, VTIME=1). Bytes are buffered and printed as one line after an idle gap — a simple RTU-style frame boundary, not Modbus parsing yet.
+`read` uses a short termios timeout (VMIN=0, VTIME=1). Bytes are buffered into a frame after an idle gap, then checked with Modbus RTU CRC16 (`[crc ok]` / `[crc bad]`).
 
-No Modbus or MQTT yet.
+No full Modbus parse or MQTT yet.

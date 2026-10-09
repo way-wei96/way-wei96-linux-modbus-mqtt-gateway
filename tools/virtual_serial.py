@@ -21,7 +21,7 @@ def send_bursts(master):
     for payload in BURSTS:
         os.write(master, payload)
         print("tx:", " ".join(f"{b:02X}" for b in payload), flush=True)
-        time.sleep(0.5)  # > gateway VTIME (0.1s) so each burst becomes one frame
+        time.sleep(0.8)  # > gateway VTIME (0.1s) so each burst becomes one frame
 
 
 def main():
@@ -42,7 +42,7 @@ def main():
             stderr=subprocess.PIPE,
             text=True,
         )
-        time.sleep(0.4)
+        time.sleep(0.6)
         if child.poll() is not None:
             sys.stderr.write(child.stderr.read())
             sys.exit(child.returncode or 1)

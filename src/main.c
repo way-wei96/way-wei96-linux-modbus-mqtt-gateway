@@ -1,9 +1,55 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
+
+/* Modbus RTU CRC16：初值 0xFFFF，多项式 0xA001（反射形式）。 */
+static uint16_t modbus_crc16(const unsigned char *data, size_t len)
+{
+    uint16_t crc = 0xFFFF;
+    size_t i;
+    int b;
+
+    for (i = 0; i < len; i++) {
+        crc ^= data[i];
+        for (b = 0; b < 8; b++) {
+            if (crc & 1)
+                crc = (crc >> 1) ^ 0xA001;
+            else
+                crc >>= 1;
+        }
+    }
+    return crc;
+}
+
+static void dump_frame(const unsigned char *frame, size_t frame_len)
+{
+    size_t j;
+    uint16_t got;
+    uint16_t expect;
+
+    for (j = 0; j < frame_len; j++)
+        printf("%02X ", frame[j]);
+
+    /* RTU 至少：地址 + 功能码 + CRC_L + CRC_H */
+    if (frame_len < 4) {
+        printf("  [too short]\n");
+        return;
+    }
+
+    got = (uint16_t)frame[frame_len - 2]
+        | ((uint16_t)frame[frame_len - 1] << 8);
+    expect = modbus_crc16(frame, frame_len - 2);
+    if (got == expect)
+        printf("  [crc ok]\n");
+    else
+        printf("  [crc bad expect=%02X %02X]\n",
+               (unsigned)(expect & 0xFF),
+               (unsigned)((expect >> 8) & 0xFF));
+}
 
 int main(int argc, char **argv)
 {
@@ -40,7 +86,7 @@ int main(int argc, char **argv)
     tio.c_cflag |= (CLOCAL | CREAD);
     /*
      * VMIN=0, VTIME=1：最多等 0.1s。
-     * 超时且缓冲非空 → 视为一帧结束（RTU 式空闲间隔，尚未解析 Modbus）。
+     * 超时且缓冲非空 → 视为一帧结束（RTU 式空闲间隔）。
      */
     tio.c_cc[VMIN] = 0;
     tio.c_cc[VTIME] = 1;
@@ -63,13 +109,9 @@ int main(int argc, char **argv)
             continue;
         }
         if (n == 0) {
-            /* 空闲超时：把已攒字节当成一帧打出。 */
+            /* 空闲超时：整帧打印，并做 CRC 校验。 */
             if (frame_len > 0) {
-                size_t j;
-
-                for (j = 0; j < frame_len; j++)
-                    printf("%02X ", frame[j]);
-                printf("\n");
+                dump_frame(frame, frame_len);
                 fflush(stdout);
                 frame_len = 0;
             }
