@@ -30,6 +30,6 @@ Real serial example:
 ./gateway /dev/tty.usbserial 9600
 ```
 
-`read` uses a short termios timeout (VMIN=0, VTIME=1). Bytes are buffered into a frame after an idle gap, checked with Modbus RTU CRC16, and on success the slave address (`frame[0]`) is printed.
+`read` uses a short termios timeout (VMIN=0, VTIME=1). Bytes are buffered into a frame after an idle gap, checked with Modbus RTU CRC16, then parsed as a slave response: address, function code, and for FC03 the byte count.
 
-No function-code parse or MQTT yet.
+The demo script feeds a sample FC03 response (not a master request). No register-value decode or MQTT yet.

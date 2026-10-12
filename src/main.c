@@ -63,13 +63,28 @@ static void dump_frame(const unsigned char *frame, size_t frame_len)
     got = (uint16_t)frame[frame_len - 2]
         | ((uint16_t)frame[frame_len - 1] << 8);
     expect = modbus_crc16(frame, frame_len - 2);
-    if (got == expect)
-        /* frame[0]：从站地址；功能码等字段稍后解析。 */
-        printf("  [crc ok] addr=%u\n", (unsigned)frame[0]);
-    else
+    if (got != expect) {
         printf("  [crc bad expect=%02X %02X]\n",
                (unsigned)(expect & 0xFF),
                (unsigned)((expect >> 8) & 0xFF));
+        return;
+    }
+
+    /*
+     * 按从站应答理解：
+     * frame[0] 地址，frame[1] 功能码；
+     * 正常 0x03 应答里 frame[2] 是后续数据字节数。
+     */
+    printf("  [crc ok] addr=%u func=0x%02X",
+           (unsigned)frame[0], (unsigned)frame[1]);
+    if (frame[1] == 0x03 && frame_len >= 5) {
+        unsigned bc = frame[2];
+
+        printf(" byte_count=%u", bc);
+        if (frame_len != (size_t)3 + bc + 2)
+            printf(" (len mismatch)");
+    }
+    printf("\n");
 }
 
 int main(int argc, char **argv)

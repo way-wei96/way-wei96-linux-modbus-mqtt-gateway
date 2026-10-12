@@ -10,8 +10,9 @@ import termios
 import time
 import tty
 
+# First burst: slave FC03 response (addr=1, 2 regs = 4 data bytes) + CRC.
 BURSTS = [
-    b"\x01\x03\x00\x00\x00\x02\xC4\x0B",
+    b"\x01\x03\x04\x12\x34\x56\x78\x81\x07",
     b"hello",
     bytes(range(8)),
 ]
