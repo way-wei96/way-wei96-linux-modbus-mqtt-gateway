@@ -64,7 +64,8 @@ static void dump_frame(const unsigned char *frame, size_t frame_len)
         | ((uint16_t)frame[frame_len - 1] << 8);
     expect = modbus_crc16(frame, frame_len - 2);
     if (got == expect)
-        printf("  [crc ok]\n");
+        /* frame[0]：从站地址；功能码等字段稍后解析。 */
+        printf("  [crc ok] addr=%u\n", (unsigned)frame[0]);
     else
         printf("  [crc bad expect=%02X %02X]\n",
                (unsigned)(expect & 0xFF),
